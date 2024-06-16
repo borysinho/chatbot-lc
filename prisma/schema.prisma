@@ -1,0 +1,259 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model Documents {
+  document_id Int                         @id @default(autoincrement())
+  ref_id      Int
+  clase       String
+  descripcion String                      @db.Text
+  embedding   Unsupported("vector(500)")?
+}
+
+model ChatEmbeddings {
+  descripcion String
+  role        Role
+  embedding   Unsupported("vector(500)")?
+
+  chat_id Int  @id
+  chats   Chat @relation(fields: [chat_id], references: [chat_id])
+
+  cliente_id Int
+  cliente    Clientes @relation(fields: [cliente_id], references: [cliente_id])
+}
+
+model Chat {
+  chat_id   Int      @id @default(autoincrement())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  role Role
+
+  cliente_id     Int
+  cliente        Clientes         @relation(fields: [cliente_id], references: [cliente_id])
+  ChatEmbeddings ChatEmbeddings[]
+}
+
+enum Role {
+  user
+  assistant
+}
+
+model Clientes {
+  cliente_id        Int                 @id @default(autoincrement())
+  nombre            String?             @db.VarChar(255)
+  email             String?             @unique @db.VarChar(255)
+  telefono          String?             @db.VarChar(20)
+  direccion         String?
+  fecha_registro    DateTime?           @default(now()) @db.Timestamp(6)
+  whatsappNumber    String              @unique
+  profileName       String
+  cotizaciones      Cotizaciones[]
+  reservasservicios ReservasServicios[]
+  ventas            Ventas[]
+  chats             Chat[]
+  ChatEmbeddings    ChatEmbeddings[]
+}
+
+model Cotizaciones {
+  cotizacion_id        Int                              @id @default(autoincrement())
+  cliente_id           Int?
+  fecha_cotizacion     DateTime?                        @default(now()) @db.Timestamp(6)
+  total                Decimal                          @db.Decimal(10, 2)
+  estatus              PendienteAprobadaRechazada_enum? @default(Pendiente)
+  clientes             Clientes?                        @relation(fields: [cliente_id], references: [cliente_id], onDelete: NoAction, onUpdate: NoAction)
+  detallescotizaciones DetallesCotizaciones[]
+  ventas               Ventas[]
+}
+
+model DetallesCotizaciones {
+  detalle_cotizacion_id Int                          @id @default(autoincrement())
+  cotizacion_id         Int
+  tipo_item             ProductoServicioPaquete_enum
+  cantidad              Int
+  precio_unitario       Decimal                      @db.Decimal(10, 2)
+  subtotal              Decimal                      @db.Decimal(10, 2)
+
+  paquete_id  Int?
+  producto_id Int?
+  servicio_id Int?
+
+  cotizaciones Cotizaciones @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: Cascade, onUpdate: NoAction)
+  paquetes     Paquetes?    @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
+  productos    Productos?   @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios    Servicios?   @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model DetallesProduccionDemandada {
+  detalle_produccion_id Int                  @id @default(autoincrement())
+  produccion_id         Int?
+  producto_id           Int?
+  cantidad              Int
+  producciondemandada   ProduccionDemandada? @relation(fields: [produccion_id], references: [produccion_id], onDelete: NoAction, onUpdate: NoAction)
+  productos             Productos?           @relation(fields: [producto_id], references: [producto_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model DetallesVentas {
+  detalle_venta_id Int                          @id @default(autoincrement())
+  venta_id         Int
+  tipo_item        ProductoServicioPaquete_enum
+  cantidad         Int
+  precio_unitario  Decimal                      @db.Decimal(10, 2)
+  subtotal         Decimal                      @db.Decimal(10, 2)
+
+  paquete_id  Int?
+  producto_id Int?
+  servicio_id Int?
+
+  ventas    Ventas     @relation(fields: [venta_id], references: [venta_id], onDelete: Cascade, onUpdate: NoAction)
+  paquetes  Paquetes?  @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
+  productos Productos? @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios Servicios? @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model DisponibilidadGeneral {
+  disponibilidad_id   Int                   @id @default(autoincrement())
+  tipo_item           ProductoServicio_enum
+  fecha               DateTime              @db.Date
+  cantidad_disponible Int
+
+  producto_id Int?
+  servicio_id Int?
+
+  productos Productos? @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios Servicios? @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tipo_item, producto_id, servicio_id, fecha])
+}
+
+model ElementosPaquetes {
+  elemento_paquete_id Int                   @id @default(autoincrement())
+  paquete_id          Int
+  tipo_elemento       ProductoServicio_enum
+  cantidad            Int
+
+  producto_id Int?
+  servicio_id Int?
+
+  paquetes  Paquetes?  @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
+  productos Productos? @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios Servicios? @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Paquetes {
+  paquete_id           Int                    @id @default(autoincrement())
+  nombre               String                 @db.VarChar(255)
+  descripcion          String?
+  precio               Decimal                @db.Decimal(10, 2)
+  moneda               String?                @default("BS") @db.VarChar(3)
+  fecha_creacion       DateTime?              @default(now()) @db.Timestamp(6)
+  detallescotizaciones DetallesCotizaciones[]
+  detallesventas       DetallesVentas[]
+  elementospaquetes    ElementosPaquetes[]
+}
+
+model ProduccionDemandada {
+  produccion_id               Int                                         @id @default(autoincrement())
+  venta_id                    Int?
+  fecha_solicitud             DateTime?                                   @default(now()) @db.Timestamp(6)
+  fecha_entrega               DateTime?                                   @db.Date
+  estatus                     PendienteEnProcesoCompletadaCancelada_enum? @default(Pendiente)
+  detallesproducciondemandada DetallesProduccionDemandada[]
+  ventas                      Ventas?                                     @relation(fields: [venta_id], references: [venta_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Productos {
+  producto_id                 Int                           @id @default(autoincrement())
+  nombre                      String                        @db.VarChar(255)
+  descripcion                 String?
+  precio                      Decimal                       @db.Decimal(10, 2)
+  moneda                      String?                       @default("BS") @db.VarChar(3)
+  stock                       Int
+  fecha_creacion              DateTime?                     @default(now()) @db.Timestamp(6)
+  detallescotizaciones        DetallesCotizaciones[]
+  detallesproducciondemandada DetallesProduccionDemandada[]
+  detallesventas              DetallesVentas[]
+  disponibilidadgeneral       DisponibilidadGeneral[]
+  elementospaquetes           ElementosPaquetes[]
+}
+
+model ReservasServicios {
+  reserva_id  Int                                @id @default(autoincrement())
+  venta_id    Int?
+  cliente_id  Int?
+  servicio_id Int?
+  fecha       DateTime?                          @db.Date
+  hora        DateTime?                          @db.Time(6)
+  cantidad    Int
+  estatus     PendienteConfirmadaCancelada_enum? @default(Pendiente)
+  clientes    Clientes?                          @relation(fields: [cliente_id], references: [cliente_id], onDelete: NoAction, onUpdate: NoAction)
+  servicios   Servicios?                         @relation(fields: [servicio_id], references: [servicio_id], onDelete: NoAction, onUpdate: NoAction)
+  ventas      Ventas?                            @relation(fields: [venta_id], references: [venta_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Servicios {
+  servicio_id           Int                     @id @default(autoincrement())
+  nombre                String                  @db.VarChar(255)
+  descripcion           String?
+  tarifa                Decimal                 @db.Decimal(10, 2)
+  moneda                String?                 @default("BS") @db.VarChar(3)
+  duracion_en_horas     Int
+  fecha_creacion        DateTime?               @default(now()) @db.Timestamp(6)
+  detallescotizaciones  DetallesCotizaciones[]
+  detallesventas        DetallesVentas[]
+  disponibilidadgeneral DisponibilidadGeneral[]
+  elementospaquetes     ElementosPaquetes[]
+  reservasservicios     ReservasServicios[]
+}
+
+model Ventas {
+  venta_id            Int                   @id @default(autoincrement())
+  cliente_id          Int?
+  fecha_venta         DateTime?             @default(now()) @db.Timestamp(6)
+  total               Decimal               @db.Decimal(10, 2)
+  cotizacion_id       Int?
+  detallesventas      DetallesVentas[]
+  producciondemandada ProduccionDemandada[]
+  reservasservicios   ReservasServicios[]
+  clientes            Clientes?             @relation(fields: [cliente_id], references: [cliente_id], onDelete: NoAction, onUpdate: NoAction)
+  cotizaciones        Cotizaciones?         @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum PendienteAprobadaRechazada_enum {
+  Pendiente
+  Aprobada
+  Rechazada
+}
+
+enum PendienteConfirmadaCancelada_enum {
+  Pendiente
+  Confirmada
+  Cancelada
+}
+
+enum PendienteEnProcesoCompletadaCancelada_enum {
+  Pendiente
+  En_Proceso @map("En Proceso")
+  Completada
+  Cancelada
+}
+
+enum ProductoServicio_enum {
+  Producto
+  Servicio
+}
+
+enum ProductoServicioPaquete_enum {
+  Producto
+  Servicio
+  Paquete
+}
