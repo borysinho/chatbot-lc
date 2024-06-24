@@ -1,8 +1,7 @@
 import pgvector from "pgvector";
+import { Document } from "@langchain/core/documents";
 // import { ServiciosEmbeddings } from "@prisma/client";
-import prisma from "../../objects/prisma.object";
-import { embeberDocumento } from "../embeddings.service";
-import { TDocuments, srvInsertarDocumento } from "./documents.service";
+import { prisma } from "../../objects/prisma.object";
 import { formatearTiempo } from "../../utils";
 
 export type TServiciosEmbeddings = {
@@ -79,51 +78,49 @@ export const srvEliminarServicio = async (servicio_id: number) => {
   return servicioEliminado;
 };
 
-export const srvServiciosDescToEmbeddings = async () => {
+export const srvServiciosNombreToText = async () => {
   const servicios = await srvObtenerServicios();
-  const embeddings = await embeberDocumento(
-    "servicio-descripcion",
-    servicios.map((servicio) => `${servicio.nombre}. ${servicio.descripcion}`)
-  );
 
-  const serviciosArray: TDocuments[] = servicios.map((servicio, i: number) => {
+  const serviciosArray: Document[] = servicios.map((servicio) => {
     return {
-      ref_id: servicio.servicio_id,
-      clase: "servicio-descripcion",
-      descripcion: `${servicio.nombre}. ${servicio.descripcion}`,
-      embedding: embeddings.data[i].embedding,
+      metadata: {
+        tipo: "servicio-nombre",
+        servicio_id: servicio.servicio_id,
+      },
+      pageContent: `Servicio: ${servicio.nombre}`,
     };
   });
-
-  await srvInsertarDocumento(serviciosArray);
 
   return serviciosArray;
 };
 
-export const srvServiciosPrecioToEmbeddings = async () => {
+export const srvServiciosDescToText = async () => {
   const servicios = await srvObtenerServicios();
-  const embeddings = await embeberDocumento(
-    "servicio-precio",
-    servicios.map(
-      (servicio) =>
-        `${servicio.nombre}. Costo: ${servicio.tarifa} ${
-          servicio.moneda
-        } por ${formatearTiempo(servicio.duracion_en_horas * 60 * 60)}`
-    )
-  );
 
-  const serviciosArray: TDocuments[] = servicios.map((servicio, i: number) => {
+  const serviciosArray: Document[] = servicios.map((servicio) => {
     return {
-      ref_id: servicio.servicio_id,
-      clase: "servicio-precio",
-      descripcion: `${servicio.nombre}. Costo: ${servicio.tarifa} ${
-        servicio.moneda
-      } por ${formatearTiempo(servicio.duracion_en_horas * 60 * 60)}`,
-      embedding: embeddings.data[i].embedding,
+      metadata: {
+        tipo: "servicio-descripcion",
+        servicio_id: servicio.servicio_id,
+      },
+      pageContent: `Servicio: ${servicio.nombre}, Descripción: ${servicio.descripcion}`,
     };
   });
 
-  await srvInsertarDocumento(serviciosArray);
+  return serviciosArray;
+};
+
+export const srvServiciosPrecioToText = async () => {
+  const servicios = await srvObtenerServicios();
+
+  const serviciosArray: Document[] = servicios.map((servicio, i: number) => {
+    return {
+      metadata: { tipo: "servicio-precio", servicio_id: servicio.servicio_id },
+      pageContent: `Servicio: ${servicio.nombre}, Precio: ${servicio.tarifa} ${
+        servicio.moneda
+      } por ${formatearTiempo(servicio.duracion_en_horas * 60 * 60)}`,
+    };
+  });
 
   return serviciosArray;
 };

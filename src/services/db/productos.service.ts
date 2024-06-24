@@ -1,18 +1,16 @@
-import test from "node:test";
-import prisma from "../../objects/prisma.object";
+import { Document } from "@langchain/core/documents";
+import { prisma } from "../../objects/prisma.object";
 import pgvector from "pgvector";
-import { TDocuments, srvInsertarDocumento } from "./documents.service";
 
 import {
-  srvServiciosDescToEmbeddings,
-  srvServiciosPrecioToEmbeddings,
+  srvServiciosDescToText,
+  srvServiciosPrecioToText,
 } from "./servicios.service";
 import {
   Productos,
   // ProductosEmbeddings,
   // ServiciosEmbeddings,
 } from "@prisma/client";
-import { embeberDocumento } from "../embeddings.service";
 
 export type TProductosEmbeddings = {
   productoembedding_id: number;
@@ -87,47 +85,45 @@ export const srvEliminarProducto = async (producto_id: number) => {
   return productoEliminado;
 };
 
-export const srvProdDescrToEmbeddings = async () => {
+export const srvProdNombreToText = async () => {
   const productos = await srvObtenerProductos();
-  const embeddings = await embeberDocumento(
-    "producto-descripcion",
-    productos.map((producto) => `${producto.nombre}. ${producto.descripcion}`)
-  );
-
-  const productosArray: TDocuments[] = productos.map((producto, i: number) => {
+  const productosArray: Document[] = productos.map((producto) => {
     return {
-      ref_id: producto.producto_id,
-      clase: "producto-descripcion",
-      descripcion: `${producto.nombre}. ${producto.descripcion}`,
-      embedding: embeddings.data[i].embedding,
+      metadata: {
+        tipo: "producto-nombre",
+        producto_id: producto.producto_id,
+      },
+      pageContent: `Producto: ${producto.nombre}`,
     };
   });
-
-  await srvInsertarDocumento(productosArray);
 
   return productosArray;
 };
 
-export const srvProdPrecioToEmbeddings = async () => {
+export const srvProdDescrToText = async () => {
   const productos = await srvObtenerProductos();
-  const embeddings = await embeberDocumento(
-    "producto-precio",
-    productos.map(
-      (producto) =>
-        `${producto.nombre}. Costo: ${producto.precio} ${producto.moneda}`
-    )
-  );
-
-  const productosArray: TDocuments[] = productos.map((producto, i: number) => {
+  const productosArray: Document[] = productos.map((producto) => {
     return {
-      ref_id: producto.producto_id,
-      clase: "producto-precio",
-      descripcion: `${producto.nombre}. Costo: ${producto.precio} ${producto.moneda}`,
-      embedding: embeddings.data[i].embedding,
+      metadata: {
+        tipo: "producto-descripcion",
+        producto_id: producto.producto_id,
+      },
+      pageContent: `Producto: ${producto.nombre}, Descripción: ${producto.descripcion}`,
     };
   });
 
-  await srvInsertarDocumento(productosArray);
+  return productosArray;
+};
+
+export const srvProdPrecioToText = async () => {
+  const productos = await srvObtenerProductos();
+
+  const productosArray: Document[] = productos.map((producto, i: number) => {
+    return {
+      metadata: { tipo: "producto-precio", producto_id: producto.producto_id },
+      pageContent: `Producto: ${producto.nombre}, Precio: ${producto.precio} ${producto.moneda}`,
+    };
+  });
 
   return productosArray;
 };

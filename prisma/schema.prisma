@@ -6,44 +6,17 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [vector]
-}
-
-model Documents {
-  document_id Int                         @id @default(autoincrement())
-  ref_id      Int
-  clase       String
-  descripcion String                      @db.Text
-  embedding   Unsupported("vector(500)")?
-}
-
-model ChatEmbeddings {
-  descripcion String
-  role        Role
-  embedding   Unsupported("vector(500)")?
-
-  chat_id Int  @id
-  chats   Chat @relation(fields: [chat_id], references: [chat_id])
-
-  cliente_id Int
-  cliente    Clientes @relation(fields: [cliente_id], references: [cliente_id])
+  extensions = [uuid_ossp(map: "uuid-ossp", schema: "public"), vector]
 }
 
 model Chat {
-  chat_id   Int      @id @default(autoincrement())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-
-  role Role
-
-  cliente_id     Int
-  cliente        Clientes         @relation(fields: [cliente_id], references: [cliente_id])
-  ChatEmbeddings ChatEmbeddings[]
-}
-
-enum Role {
-  user
-  assistant
+  chat_id    Int                    @id @default(autoincrement())
+  session_id String                 @db.VarChar(255)
+  role       Chatmedatada_enum
+  uuid       String                 @db.VarChar(255)
+  message    String
+  vector     Unsupported("vector")?
+  cliente    Clientes               @relation(fields: [session_id], references: [whatsappNumber])
 }
 
 model Clientes {
@@ -53,13 +26,12 @@ model Clientes {
   telefono          String?             @db.VarChar(20)
   direccion         String?
   fecha_registro    DateTime?           @default(now()) @db.Timestamp(6)
-  whatsappNumber    String              @unique
+  whatsappNumber    String              @unique @db.VarChar(255)
   profileName       String
+  chat              Chat[]
   cotizaciones      Cotizaciones[]
   reservasservicios ReservasServicios[]
   ventas            Ventas[]
-  chats             Chat[]
-  ChatEmbeddings    ChatEmbeddings[]
 }
 
 model Cotizaciones {
@@ -80,15 +52,13 @@ model DetallesCotizaciones {
   cantidad              Int
   precio_unitario       Decimal                      @db.Decimal(10, 2)
   subtotal              Decimal                      @db.Decimal(10, 2)
-
-  paquete_id  Int?
-  producto_id Int?
-  servicio_id Int?
-
-  cotizaciones Cotizaciones @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: Cascade, onUpdate: NoAction)
-  paquetes     Paquetes?    @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
-  productos    Productos?   @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
-  servicios    Servicios?   @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+  paquete_id            Int?
+  producto_id           Int?
+  servicio_id           Int?
+  cotizaciones          Cotizaciones                 @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: Cascade, onUpdate: NoAction)
+  paquetes              Paquetes?                    @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
+  productos             Productos?                   @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios             Servicios?                   @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model DetallesProduccionDemandada {
@@ -108,15 +78,13 @@ model DetallesVentas {
   cantidad         Int
   precio_unitario  Decimal                      @db.Decimal(10, 2)
   subtotal         Decimal                      @db.Decimal(10, 2)
-
-  paquete_id  Int?
-  producto_id Int?
-  servicio_id Int?
-
-  ventas    Ventas     @relation(fields: [venta_id], references: [venta_id], onDelete: Cascade, onUpdate: NoAction)
-  paquetes  Paquetes?  @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
-  productos Productos? @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
-  servicios Servicios? @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+  paquete_id       Int?
+  producto_id      Int?
+  servicio_id      Int?
+  paquetes         Paquetes?                    @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
+  productos        Productos?                   @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios        Servicios?                   @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+  ventas           Ventas                       @relation(fields: [venta_id], references: [venta_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -125,12 +93,10 @@ model DisponibilidadGeneral {
   tipo_item           ProductoServicio_enum
   fecha               DateTime              @db.Date
   cantidad_disponible Int
-
-  producto_id Int?
-  servicio_id Int?
-
-  productos Productos? @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
-  servicios Servicios? @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+  producto_id         Int?
+  servicio_id         Int?
+  productos           Productos?            @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios           Servicios?            @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tipo_item, producto_id, servicio_id, fecha])
 }
@@ -140,13 +106,11 @@ model ElementosPaquetes {
   paquete_id          Int
   tipo_elemento       ProductoServicio_enum
   cantidad            Int
-
-  producto_id Int?
-  servicio_id Int?
-
-  paquetes  Paquetes?  @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
-  productos Productos? @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
-  servicios Servicios? @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
+  producto_id         Int?
+  servicio_id         Int?
+  paquetes            Paquetes              @relation(fields: [paquete_id], references: [paquete_id], onDelete: Cascade, onUpdate: NoAction)
+  productos           Productos?            @relation(fields: [producto_id], references: [producto_id], onDelete: Cascade, onUpdate: NoAction)
+  servicios           Servicios?            @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model Paquetes {
@@ -226,6 +190,35 @@ model Ventas {
   reservasservicios   ReservasServicios[]
   clientes            Clientes?             @relation(fields: [cliente_id], references: [cliente_id], onDelete: NoAction, onUpdate: NoAction)
   cotizaciones        Cotizaciones?         @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model documents {
+  document_id   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  pagecontent   String?
+  metadata      Json?
+  vector        Unsupported("vector")?
+  collection_id String?                @db.Uuid
+  collections   collections?           @relation(fields: [collection_id], references: [uuid], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model chat_history {
+  id         Int    @id @default(autoincrement())
+  session_id String @db.VarChar(255)
+  message    Json
+}
+
+model collections {
+  uuid      String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String?     @db.VarChar
+  cmetadata Json?
+  documents documents[]
+
+  @@index([name], map: "idx_collections_name")
+}
+
+enum Chatmedatada_enum {
+  user
+  ia
 }
 
 enum PendienteAprobadaRechazada_enum {

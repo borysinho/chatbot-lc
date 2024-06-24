@@ -17,7 +17,9 @@ export const sendWhatsappMessage = async (to: string, body: string) => {
 
   twilioClient.messages
     .create(data)
-    .then((message) => console.log("Mensaje Enviado. sid:" + message.sid));
+    .then((message) => console.log("Mensaje Enviado. sid:" + message.sid))
+    .catch((error) => console.error("Error al enviar mensaje", error))
+    .finally(() => console.log("Mensaje enviado por finally"));
 };
 
 export const ListMessagesFromNumber = (number: string) => {

@@ -1,9 +1,6 @@
 import pgvector from "pgvector";
-import prisma from "../../objects/prisma.object";
-// import { PaquetesEmbeddings } from "@prisma/client";
-import client from "../../objects/prisma.object";
-import { TDocuments, srvInsertarDocumento } from "./documents.service";
-import { embeberDocumento } from "../embeddings.service";
+import { Document } from "@langchain/core/documents";
+import { prisma } from "../../objects/prisma.object";
 
 export type TPaquetesEmbeddings = {
   paqueteembedding_id: number;
@@ -13,7 +10,7 @@ export type TPaquetesEmbeddings = {
 };
 
 export const srvInsertarPaquete = async (paquete: any) => {
-  const paqueteCreado = await client.paquetes.create({
+  const paqueteCreado = await prisma.paquetes.create({
     data: {
       nombre: paquete.nombre,
       descripcion: paquete.descripcion,
@@ -25,13 +22,13 @@ export const srvInsertarPaquete = async (paquete: any) => {
 };
 
 export const srvObtenerPaquetes = async () => {
-  const paquetes = await client.paquetes.findMany();
+  const paquetes = await prisma.paquetes.findMany();
 
   return paquetes;
 };
 
 export const srvObtenerPaquete = async (paquete_id: number) => {
-  const paquete = await client.paquetes.findUnique({
+  const paquete = await prisma.paquetes.findUnique({
     where: {
       paquete_id,
     },
@@ -44,7 +41,7 @@ export const srvActualizarPaquete = async (
   paquete_id: number,
   paquete: any
 ) => {
-  const paqueteActualizado = await client.paquetes.update({
+  const paqueteActualizado = await prisma.paquetes.update({
     where: {
       paquete_id,
     },
@@ -59,7 +56,7 @@ export const srvActualizarPaquete = async (
 };
 
 export const srvEliminarPaquete = async (paquete_id: number) => {
-  const paqueteEliminado = await client.paquetes.delete({
+  const paqueteEliminado = await prisma.paquetes.delete({
     where: {
       paquete_id,
     },
@@ -69,7 +66,7 @@ export const srvEliminarPaquete = async (paquete_id: number) => {
 };
 
 export const srvObtenerFullPaquete = async () => {
-  const paquetes = await client.paquetes.findMany({
+  const paquetes = await prisma.paquetes.findMany({
     select: {
       paquete_id: true,
       nombre: true,
@@ -105,8 +102,9 @@ export const srvObtenerFullPaquete = async () => {
   return paquetes;
 };
 
-export const srvPaqueteDescripcionToEmbeddings = async () => {
+export const srvPaqueteDescripcionToText = async () => {
   const paquetes = await srvObtenerFullPaquete();
+
   const paquetesStringArray = paquetes.map((paquete) => {
     const elementos = paquete.elementospaquetes.map((elemento) => {
       return elemento.tipo_elemento === "Producto"
@@ -117,45 +115,25 @@ export const srvPaqueteDescripcionToEmbeddings = async () => {
     return `${paquete.nombre}. Consta de ${elementos.join(", ")}.`;
   });
 
-  const embeddings = await embeberDocumento(
-    "paquete-descripcion",
-    paquetesStringArray
-  );
-
-  const paquetesDesc: TDocuments[] = paquetes.map((paquete, i: number) => {
+  const paquetesDesc: Document[] = paquetes.map((paquete, i: number) => {
     return {
-      ref_id: paquete.paquete_id,
-      clase: "paquete-descripcion",
-      descripcion: paquetesStringArray[i],
-      embedding: embeddings.data[i].embedding,
+      metadata: { tipo: "paquete-descripcion", paquete_id: paquete.paquete_id },
+      pageContent: paquetesStringArray[i],
     };
   });
-
-  await srvInsertarDocumento(paquetesDesc);
 
   return paquetesDesc;
 };
 
-export const srvPaquetePrecioToEmbeddings = async () => {
+export const srvPaquetePrecioToText = async () => {
   const paquetes = await srvObtenerFullPaquete();
-  const embeddings = await embeberDocumento(
-    "paquete-precio",
-    paquetes.map(
-      (paquete) =>
-        `${paquete.nombre}. Precio: ${paquete.precio} ${paquete.moneda}`
-    )
-  );
 
-  const paquetesPrecio: TDocuments[] = paquetes.map((paquete, i: number) => {
+  const paquetesPrecio: Document[] = paquetes.map((paquete) => {
     return {
-      ref_id: paquete.paquete_id,
-      clase: "paquete-precio",
-      descripcion: `${paquete.nombre}. Precio: ${paquete.precio} ${paquete.moneda}`,
-      embedding: embeddings.data[i].embedding,
+      metadata: { tipo: "paquete-precio", paquete_id: paquete.paquete_id },
+      pageContent: `${paquete.nombre}. Precio: ${paquete.precio} ${paquete.moneda}`,
     };
   });
-
-  await srvInsertarDocumento(paquetesPrecio);
 
   return paquetesPrecio;
 };

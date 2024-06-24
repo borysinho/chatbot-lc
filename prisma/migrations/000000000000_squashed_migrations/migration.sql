@@ -1,8 +1,11 @@
 -- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "public";
+
+-- CreateExtension
 CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('user', 'assistant');
+CREATE TYPE "Chatmedatada_enum" AS ENUM ('user', 'ia');
 
 -- CreateEnum
 CREATE TYPE "PendienteAprobadaRechazada_enum" AS ENUM ('Pendiente', 'Aprobada', 'Rechazada');
@@ -20,34 +23,13 @@ CREATE TYPE "ProductoServicio_enum" AS ENUM ('Producto', 'Servicio');
 CREATE TYPE "ProductoServicioPaquete_enum" AS ENUM ('Producto', 'Servicio', 'Paquete');
 
 -- CreateTable
-CREATE TABLE "Documents" (
-    "document_id" SERIAL NOT NULL,
-    "ref_id" INTEGER NOT NULL,
-    "clase" TEXT NOT NULL,
-    "descripcion" TEXT NOT NULL,
-    "embedding" vector(500),
-
-    CONSTRAINT "Documents_pkey" PRIMARY KEY ("document_id")
-);
-
--- CreateTable
-CREATE TABLE "ChatEmbeddings" (
-    "descripcion" TEXT NOT NULL,
-    "role" "Role" NOT NULL,
-    "embedding" vector(500),
-    "chat_id" INTEGER NOT NULL,
-    "cliente_id" INTEGER NOT NULL,
-
-    CONSTRAINT "ChatEmbeddings_pkey" PRIMARY KEY ("chat_id")
-);
-
--- CreateTable
 CREATE TABLE "Chat" (
     "chat_id" SERIAL NOT NULL,
-    "content" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "role" "Role" NOT NULL,
-    "cliente_id" INTEGER NOT NULL,
+    "session_id" VARCHAR(255) NOT NULL,
+    "role" "Chatmedatada_enum" NOT NULL,
+    "uuid" VARCHAR(255) NOT NULL,
+    "message" TEXT NOT NULL,
+    "vector" vector,
 
     CONSTRAINT "Chat_pkey" PRIMARY KEY ("chat_id")
 );
@@ -60,7 +42,7 @@ CREATE TABLE "Clientes" (
     "telefono" VARCHAR(20),
     "direccion" TEXT,
     "fecha_registro" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "whatsappNumber" TEXT NOT NULL,
+    "whatsappNumber" VARCHAR(255) NOT NULL,
     "profileName" TEXT NOT NULL,
 
     CONSTRAINT "Clientes_pkey" PRIMARY KEY ("cliente_id")
@@ -215,6 +197,16 @@ CREATE TABLE "Ventas" (
     CONSTRAINT "Ventas_pkey" PRIMARY KEY ("venta_id")
 );
 
+-- CreateTable
+CREATE TABLE "documents" (
+    "document_id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "pagecontent" TEXT,
+    "metadata" JSONB,
+    "vector" vector,
+
+    CONSTRAINT "documents_pkey" PRIMARY KEY ("document_id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Clientes_email_key" ON "Clientes"("email");
 
@@ -225,13 +217,7 @@ CREATE UNIQUE INDEX "Clientes_whatsappNumber_key" ON "Clientes"("whatsappNumber"
 CREATE UNIQUE INDEX "DisponibilidadGeneral_tipo_item_producto_id_servicio_id_fec_key" ON "DisponibilidadGeneral"("tipo_item", "producto_id", "servicio_id", "fecha");
 
 -- AddForeignKey
-ALTER TABLE "ChatEmbeddings" ADD CONSTRAINT "ChatEmbeddings_chat_id_fkey" FOREIGN KEY ("chat_id") REFERENCES "Chat"("chat_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ChatEmbeddings" ADD CONSTRAINT "ChatEmbeddings_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "Clientes"("cliente_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Chat" ADD CONSTRAINT "Chat_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "Clientes"("cliente_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Chat" ADD CONSTRAINT "Chat_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "Clientes"("whatsappNumber") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Cotizaciones" ADD CONSTRAINT "Cotizaciones_cliente_id_fkey" FOREIGN KEY ("cliente_id") REFERENCES "Clientes"("cliente_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -255,9 +241,6 @@ ALTER TABLE "DetallesProduccionDemandada" ADD CONSTRAINT "DetallesProduccionDema
 ALTER TABLE "DetallesProduccionDemandada" ADD CONSTRAINT "DetallesProduccionDemandada_producto_id_fkey" FOREIGN KEY ("producto_id") REFERENCES "Productos"("producto_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "DetallesVentas" ADD CONSTRAINT "DetallesVentas_venta_id_fkey" FOREIGN KEY ("venta_id") REFERENCES "Ventas"("venta_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- AddForeignKey
 ALTER TABLE "DetallesVentas" ADD CONSTRAINT "DetallesVentas_paquete_id_fkey" FOREIGN KEY ("paquete_id") REFERENCES "Paquetes"("paquete_id") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
@@ -265,6 +248,9 @@ ALTER TABLE "DetallesVentas" ADD CONSTRAINT "DetallesVentas_producto_id_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "DetallesVentas" ADD CONSTRAINT "DetallesVentas_servicio_id_fkey" FOREIGN KEY ("servicio_id") REFERENCES "Servicios"("servicio_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "DetallesVentas" ADD CONSTRAINT "DetallesVentas_venta_id_fkey" FOREIGN KEY ("venta_id") REFERENCES "Ventas"("venta_id") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "DisponibilidadGeneral" ADD CONSTRAINT "DisponibilidadGeneral_producto_id_fkey" FOREIGN KEY ("producto_id") REFERENCES "Productos"("producto_id") ON DELETE CASCADE ON UPDATE NO ACTION;

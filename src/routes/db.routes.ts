@@ -1,9 +1,5 @@
 import { Router } from "express";
-import {
-  ctrlBusquedaSemanticaProductos,
-  ctrlCargarEmbeddings,
-  ctrlObtenerDatos,
-} from "../controllers/db.controller";
+import { ctrlCargarDatos } from "../controllers/db.controller";
 
 class DBRoutes {
   router = Router();
@@ -13,9 +9,9 @@ class DBRoutes {
   }
 
   intializeRoutes() {
-    this.router.get("/data", ctrlObtenerDatos);
-    this.router.post("/load", ctrlCargarEmbeddings);
-    this.router.post("/search", ctrlBusquedaSemanticaProductos);
+    this.router.post("/data", ctrlCargarDatos);
+    // this.router.post("/load", ctrlCargarEmbeddings);
+    // this.router.post("/search", ctrlBusquedaSemanticaProductos);
   }
 }
 

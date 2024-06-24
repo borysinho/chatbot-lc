@@ -1,23 +1,20 @@
 import { Request, Response } from "express";
+import { buildAgent } from "../services/agents.service";
+import {
+  srvInsertarCliente,
+  srvObtenerCliente,
+  srvObtenerClienteWhatsapp,
+} from "../services/db/clientes.service";
 import { sendWhatsappMessage } from "../services/twilio.service";
+import { Document } from "langchain/document";
 import { twiml } from "twilio";
 import { HttpException, catchedAsync, response } from "../utils";
-import {
-  srvChatToEmbeddings,
-  srvInsertarChat,
-  srvObtenerChat,
-} from "../services/db/chat.service";
-import {
-  CompletionMessageType,
-  completarChat,
-  openAICompletion,
-  systemContext,
-} from "../services/completions.service";
-import { embeberDocumento } from "../services/embeddings.service";
-import { srvObtenerProductoEmbedding } from "../services/db/productos.service";
-import { srvObtenerDocumentos } from "../services/db/documents.service";
-import { Role } from "@prisma/client";
+import { srvObtenerChatDesdeWhatsapp } from "../services/db/chat.service";
 
+import { srvObtenerProductoEmbedding } from "../services/db/productos.service";
+
+import { pgProductosDescripcionVectorStore } from "../objects/pgvector.object";
+import { srvBuscarSimilaridad } from "../services/pgvector.service";
 //==============================
 
 export const newMessage = catchedAsync(async (req: Request, res: Response) => {
@@ -28,102 +25,112 @@ export const newMessage = catchedAsync(async (req: Request, res: Response) => {
     MediaContentType0,
     MediaUrl0,
   } = req.body;
+});
 
-  // Convertimos a embeddings el texto del usuario
-  const textoUsuarioEmbedding = await embeberDocumento("user-text", [mensaje]);
+export const testLC = catchedAsync(async (req: Request, res: Response) => {
+  // const { whatsappNumber, profileName, texto } = req.body;
+  let {
+    WaId: whatsappNumber,
+    Body: texto,
+    ProfileName: profileName,
+    MediaContentType0,
+    MediaUrl0,
+  } = req.body;
 
-  //Insertamos chat
-  const chat = await srvInsertarChat(
-    mensaje,
-    whatsappNumber,
-    profileName,
-    "user"
-  );
+  // let cliente = await srvObtenerClienteWhatsapp(whatsappNumber);
 
-  // console.log({ chat });
+  // if (!cliente) {
+  //   cliente = await srvInsertarCliente({ whatsappNumber, profileName });
+  // }
 
-  // Realizamos búsqueda semántica en documentos
-  const documentos = await srvObtenerDocumentos(
-    textoUsuarioEmbedding.data[0].embedding
-  );
+  console.log({ whatsappNumber, profileName, texto });
 
-  const contexto: string[] = documentos.map((documento) => {
-    return documento.descripcion;
-  });
+  const result: any = await buildAgent(texto, whatsappNumber);
 
-  // console.log({ documentos });
-  // Validamos el resultado de los documentos
-  const aux = documentos.map(({ ref_id, clase, descripcion }) => ({
-    ref_id,
-    clase,
-    descripcion,
-  }));
+  // // console.log({ IAAnser: result.output });
 
-  console.log({ aux });
+  const message = await sendWhatsappMessage(whatsappNumber, result.output);
 
-  // Obtenemos 2 mensajes de conversación relacionados
-  const chatEmbeddings = await srvObtenerChat(
-    chat.cliente_id,
-    textoUsuarioEmbedding.data[0].embedding
-  );
+  response(res, 200, result.output as string);
 
-  const chatBuscado: CompletionMessageType[] = chatEmbeddings.map((data) => {
-    return {
-      role: data.role,
-      content: data.descripcion,
-    };
-  });
+  // const result = await ofrecerProductosYServicios(
+  //   texto,
+  //   whatsappNumber,
+  //   profileName
+  // );
+  // const result = await buildAgent(texto);
 
-  console.log({ chatBuscado });
+  // response(res, 200, message);
 
-  // Luego de haber buscado las conversaciones relacionadas, registramos el embedding
-  const count = await srvChatToEmbeddings({
-    cliente_id: chat.cliente_id,
-    chat_id: chat.chat_id,
-    role: chat.role,
-    content: chat.content,
-    embedding: textoUsuarioEmbedding.data[0].embedding,
-  });
+  // const chats = await srvObtenerChatDesdeWhatsapp(whatsappNumber);
 
-  const chatRespuestaIA = await completarChat(
-    whatsappNumber,
-    profileName,
-    [
-      {
-        role: "system",
-        content: systemContext(contexto),
-      },
-    ],
-    chatBuscado,
-    mensaje
-  );
+  // const result = await test14(texto, whatsappNumber, profileName);
 
-  // Registramos el chat en la base de datos
-  const chatAssistant = await srvInsertarChat(
-    chatRespuestaIA.choices[0].message.content,
-    whatsappNumber,
-    profileName,
-    Role.assistant
-  );
+  // response(res, 200, result);
 
-  const chatAssistantVector = await embeberDocumento("assistant-text", [
-    chatRespuestaIA.choices[0].message.content,
-  ]);
+  // const vectorStore = await pgVectorStore();
 
-  // Registramos los embeddings
-  const chatAssistantEmbeddings = await srvChatToEmbeddings({
-    cliente_id: chat.cliente_id,
-    chat_id: chatAssistant.chat_id,
-    role: chatAssistant.role,
-    content: chatAssistant.content,
-    embedding: chatAssistantVector.data[0].embedding,
-  });
+  // const filter = (vectorStore.filter = {
+  //   profileName,
+  // });
 
-  // Enviamos respuesta a Twilio
-  await sendWhatsappMessage(
-    whatsappNumber,
-    chatRespuestaIA.choices[0].message.content
-  );
+  // console.log({ filter });
 
-  response(res, 200, { message: "Mensaje enviado" });
+  // return response(res, 200, "OK");
+
+  // const result = await chatearConMemoria(texto, profileName, whatsappNumber);
+  // const result = await test2(texto, whatsappNumber);
+  // const chatHistory = await test4(texto, whatsappNumber);
+  // const result = await chatHistory.invoke(
+  //   {
+  //     input: texto,
+  //   },
+  //   { configurable: { sessionId: whatsappNumber } }
+  // );
+
+  // console.log({ result });
+
+  // return response(res, 200, result);
+
+  // console.log({ cliente });
+
+  //==============================================
+  // const chatHistory = await srvChainConHistoria2();
+  // const chatContextualizado = await chatHistory.invoke(
+  //   {
+  //     input: texto,
+  //   },
+  //   { configurable: { sessionId: whatsappNumber } }
+  // );
+
+  // console.log({ chatContextualizado });
+  // response(res, 200, chatContextualizado);
+  //==============================================
+
+  // const similitud = await srvBuscarSimilaridad(chatContextualizado, 5);
+  // console.log({ chatContextualizado, similitud });
+
+  // const pageContent = similitud.map((s) => s.pageContent).join("\n");
+
+  // const document = new Document({
+  //   pageContent,
+  // });
+
+  // console.log({ document });
+
+  // console.log({ chatContextualizado });
+  // const retrievalChain = await test13();
+
+  // const result = await retrievalChain.invoke({
+  //   input: chatContextualizado,
+  // });
+  // const result = await retrievalChain.invoke({
+  //   input: chatContextualizado,
+  //   context: similitud,
+  // });
+
+  // console.log({ answer: retrievalChain });
+
+  // // console.log({ result });
+  // response(res, 200, result.answer);
 });
