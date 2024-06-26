@@ -1,3 +1,5 @@
+import { PostgresRecordManager } from "@langchain/community/indexes/postgres";
+import { index } from "langchain/indexes";
 import { createRetrieverTool } from "langchain/tools/retriever";
 import {
   AgentExecutor,
@@ -12,12 +14,19 @@ import {
   pgServiciosDescripcionVectorStore,
   pgServiciosNombreVectorStore,
   pgServiciosPreciosVectorStore,
+  reusablePool,
 } from "../objects/pgvector.object";
 import { chatModel } from "../objects/completions.object";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { pull } from "langchain/hub";
 import { chatHistory } from "../objects/chat.history.object";
 import { srvRunnableConHistorial } from "./db/chat.service";
+import {
+  DistanceStrategy,
+  PGVectorStore,
+} from "@langchain/community/vectorstores/pgvector";
+import { PoolConfig } from "pg";
+import { embeddings } from "../objects/embeddings.object";
 
 export const buildAgent = async (inputText: string, whatsappNumber: string) => {
   try {
@@ -117,6 +126,7 @@ export const buildAgent = async (inputText: string, whatsappNumber: string) => {
     const prompt = await pull<ChatPromptTemplate>(
       "hwchase17/openai-functions-agent"
     );
+
     const agent = await createOpenAIFunctionsAgent({
       llm: chatModel,
       tools,
@@ -144,4 +154,118 @@ export const buildAgent = async (inputText: string, whatsappNumber: string) => {
     console.error(error);
     return error;
   }
+};
+
+export const textDBIndex = async () => {
+  const config = {
+    postgresConnectionOptions: {
+      type: "postgres",
+      host: "127.0.0.1",
+      port: 5432,
+      user: "postgres",
+      password: "postgres",
+      database: "chatbot",
+    } as PoolConfig,
+    tableName: "Documents",
+    columns: {
+      idColumnName: "document_id",
+      vectorColumnName: "vector",
+      contentColumnName: "pagecontent",
+      metadataColumnName: "metadata",
+    },
+  };
+
+  const vectorStore = await PGVectorStore.initialize(embeddings, config);
+
+  // Create a new record manager
+  const recordManagerConfig = {
+    postgresConnectionOptions: {
+      type: "postgres",
+      host: "127.0.0.1",
+      port: 5432,
+      user: "postgres",
+      password: "postgres",
+      database: "chatbot",
+    } as PoolConfig,
+    tableName: "upsertion_records",
+  };
+  const recordManager = new PostgresRecordManager(
+    "test_namespace",
+    recordManagerConfig
+  );
+
+  // Create the schema if it doesn't exist
+  await recordManager.createSchema();
+
+  const doc1 = {
+    pageContent: "kitty",
+    metadata: { source: "kitty.txt" },
+  };
+
+  const doc2 = {
+    pageContent: "doggy",
+    metadata: { source: "doggy.txt" },
+  };
+
+  /**
+   * Hacky helper method to clear content. See the `full` mode section to to understand why it works.
+   */
+  async function clear() {
+    await index({
+      docsSource: [],
+      recordManager,
+      vectorStore,
+      options: {
+        cleanup: "full",
+        sourceIdKey: "source",
+      },
+    });
+  }
+
+  // No cleanup
+  await clear();
+  // This mode does not do automatic clean up of old versions of content; however, it still takes care of content de-duplication.
+
+  console.log(
+    await index({
+      docsSource: [doc1, doc1, doc1, doc1, doc1, doc1],
+      recordManager,
+      vectorStore,
+      options: {
+        cleanup: undefined,
+        sourceIdKey: "source",
+      },
+    })
+  );
+
+  await clear();
+
+  console.log(
+    await index({
+      docsSource: [doc1, doc2],
+      recordManager,
+      vectorStore,
+      options: {
+        cleanup: undefined,
+        sourceIdKey: "source",
+      },
+    })
+  );
+
+  const doc1Updated = {
+    pageContent: "kitty updated",
+    metadata: { source: "kitty.txt" },
+  };
+
+  console.log(
+    await index({
+      docsSource: [doc1Updated, doc2],
+      recordManager,
+      vectorStore,
+      options: {
+        cleanup: undefined,
+        sourceIdKey: "source",
+      },
+    })
+  );
 };

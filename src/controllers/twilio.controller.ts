@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { buildAgent } from "../services/agents.service";
+import { buildAgent, textDBIndex } from "../services/agents.service";
 import {
   srvInsertarCliente,
   srvObtenerCliente,
@@ -134,3 +134,11 @@ export const testLC = catchedAsync(async (req: Request, res: Response) => {
   // // console.log({ result });
   // response(res, 200, result.answer);
 });
+
+export const indexDataSource = catchedAsync(
+  async (req: Request, res: Response) => {
+    await textDBIndex();
+
+    return response(res, 200, "OK");
+  }
+);

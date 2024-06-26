@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { newMessage, testLC } from "../controllers/twilio.controller";
+import {
+  indexDataSource,
+  newMessage,
+  testLC,
+} from "../controllers/twilio.controller";
 
 class TwilioRoutes {
   router = Router();
@@ -25,6 +29,7 @@ class TwilioRoutes {
     });
 
     this.router.post("/testlc", testLC);
+    this.router.post("/index", indexDataSource);
   }
 }
 

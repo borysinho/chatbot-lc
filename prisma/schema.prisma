@@ -61,15 +61,6 @@ model DetallesCotizaciones {
   servicios             Servicios?                   @relation(fields: [servicio_id], references: [servicio_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-model DetallesProduccionDemandada {
-  detalle_produccion_id Int                  @id @default(autoincrement())
-  produccion_id         Int?
-  producto_id           Int?
-  cantidad              Int
-  producciondemandada   ProduccionDemandada? @relation(fields: [produccion_id], references: [produccion_id], onDelete: NoAction, onUpdate: NoAction)
-  productos             Productos?           @relation(fields: [producto_id], references: [producto_id], onDelete: NoAction, onUpdate: NoAction)
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model DetallesVentas {
   detalle_venta_id Int                          @id @default(autoincrement())
@@ -125,29 +116,20 @@ model Paquetes {
   elementospaquetes    ElementosPaquetes[]
 }
 
-model ProduccionDemandada {
-  produccion_id               Int                                         @id @default(autoincrement())
-  venta_id                    Int?
-  fecha_solicitud             DateTime?                                   @default(now()) @db.Timestamp(6)
-  fecha_entrega               DateTime?                                   @db.Date
-  estatus                     PendienteEnProcesoCompletadaCancelada_enum? @default(Pendiente)
-  detallesproducciondemandada DetallesProduccionDemandada[]
-  ventas                      Ventas?                                     @relation(fields: [venta_id], references: [venta_id], onDelete: NoAction, onUpdate: NoAction)
-}
-
 model Productos {
-  producto_id                 Int                           @id @default(autoincrement())
-  nombre                      String                        @db.VarChar(255)
-  descripcion                 String?
-  precio                      Decimal                       @db.Decimal(10, 2)
-  moneda                      String?                       @default("BS") @db.VarChar(3)
-  stock                       Int
-  fecha_creacion              DateTime?                     @default(now()) @db.Timestamp(6)
-  detallescotizaciones        DetallesCotizaciones[]
-  detallesproducciondemandada DetallesProduccionDemandada[]
-  detallesventas              DetallesVentas[]
-  disponibilidadgeneral       DisponibilidadGeneral[]
-  elementospaquetes           ElementosPaquetes[]
+  producto_id           Int                    @id @default(autoincrement())
+  nombre                String                 @db.VarChar(255)
+  descripcion           String?
+  precio                Decimal                @db.Decimal(10, 2)
+  moneda                String?                @default("BS") @db.VarChar(3)
+  stock                 Int
+  producto_bajo_demanda Boolean                @default(false)
+  fecha_creacion        DateTime?              @default(now()) @db.Timestamp(6)
+  detallescotizaciones  DetallesCotizaciones[]
+
+  detallesventas        DetallesVentas[]
+  disponibilidadgeneral DisponibilidadGeneral[]
+  elementospaquetes     ElementosPaquetes[]
 }
 
 model ReservasServicios {
@@ -180,16 +162,15 @@ model Servicios {
 }
 
 model Ventas {
-  venta_id            Int                   @id @default(autoincrement())
-  cliente_id          Int?
-  fecha_venta         DateTime?             @default(now()) @db.Timestamp(6)
-  total               Decimal               @db.Decimal(10, 2)
-  cotizacion_id       Int?
-  detallesventas      DetallesVentas[]
-  producciondemandada ProduccionDemandada[]
-  reservasservicios   ReservasServicios[]
-  clientes            Clientes?             @relation(fields: [cliente_id], references: [cliente_id], onDelete: NoAction, onUpdate: NoAction)
-  cotizaciones        Cotizaciones?         @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: NoAction, onUpdate: NoAction)
+  venta_id          Int                 @id @default(autoincrement())
+  cliente_id        Int?
+  fecha_venta       DateTime?           @default(now()) @db.Timestamp(6)
+  total             Decimal             @db.Decimal(10, 2)
+  cotizacion_id     Int?
+  detallesventas    DetallesVentas[]
+  reservasservicios ReservasServicios[]
+  clientes          Clientes?           @relation(fields: [cliente_id], references: [cliente_id], onDelete: NoAction, onUpdate: NoAction)
+  cotizaciones      Cotizaciones?       @relation(fields: [cotizacion_id], references: [cotizacion_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model documents {
