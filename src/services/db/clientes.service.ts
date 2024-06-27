@@ -1,11 +1,16 @@
 import { prisma } from "../../objects/prisma.object";
 
 export const srvInsertarCliente = async (cliente: any) => {
-  const clienteCreado = await prisma.clientes.create({
-    data: cliente,
-  });
+  try {
+    const clienteCreado = await prisma.clientes.create({
+      data: cliente,
+    });
 
-  return clienteCreado;
+    return clienteCreado;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
 };
 
 export const srvObtenerClientes = async () => {
@@ -41,6 +46,20 @@ export const srvActualizarCliente = async (
   const clienteActualizado = await prisma.clientes.update({
     where: {
       cliente_id,
+    },
+    data: cliente,
+  });
+
+  return clienteActualizado;
+};
+
+export const srvActualizarClienteWhatsapp = async (
+  whatsappNumber: string,
+  cliente: any
+) => {
+  const clienteActualizado = await prisma.clientes.update({
+    where: {
+      whatsappNumber,
     },
     data: cliente,
   });

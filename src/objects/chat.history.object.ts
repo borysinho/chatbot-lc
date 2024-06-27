@@ -8,8 +8,13 @@ import {
   StoredPostgresMessageData,
 } from "@langchain/community/stores/message/postgres";
 import { reusablePool } from "./pgvector.object";
+import {
+  srvInsertarCliente,
+  srvObtenerCliente,
+  srvObtenerClienteWhatsapp,
+} from "../services/db/clientes.service";
 
-export const chatHistory = (sessionId: string) => {
+export const chatHistory = async (sessionId: string, profileName: string) => {
   const history = new PostgresChatMessageHistory({
     sessionId,
     pool: reusablePool,
@@ -18,6 +23,3 @@ export const chatHistory = (sessionId: string) => {
 
   return history;
 };
-
-
-

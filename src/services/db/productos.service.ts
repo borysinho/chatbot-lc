@@ -118,10 +118,23 @@ export const srvProdDescrToText = async () => {
 export const srvProdPrecioToText = async () => {
   const productos = await srvObtenerProductos();
 
-  const productosArray: Document[] = productos.map((producto, i: number) => {
+  const productosArray: Document[] = productos.map((producto) => {
     return {
       metadata: { tipo: "producto-precio", producto_id: producto.producto_id },
       pageContent: `Producto: ${producto.nombre}, Precio: ${producto.precio} ${producto.moneda}`,
+    };
+  });
+
+  return productosArray;
+};
+
+export const srvProdStockToText = async () => {
+  const stockProductos = await prisma.productos.findMany({});
+
+  const productosArray: Document[] = stockProductos.map((producto) => {
+    return {
+      metadata: { tipo: "producto-stock", producto_id: producto.producto_id },
+      pageContent: `Producto: ${producto.nombre}, Stock: ${producto.stock}`,
     };
   });
 

@@ -24,6 +24,31 @@ INSERT INTO "Servicios" (nombre, descripcion, tarifa, moneda, duracion_en_horas)
 ('Organización de Ceremonia Civil y Religiosa', 'Organización y coordinación de la ceremonia civil y/o religiosa.', 5950.00, 'BS', 60),
 ('Planificación de Luna de Miel', 'Asesoramiento y planificación de la luna de miel perfecta según los deseos de los novios.', 18000.00, 'BS', 24*7);
 
+-- Clientes
+INSERT INTO "Clientes" (nombre, "whatsappNumber", "profileName") VALUES
+('Juan Pérez', '59112345678', 'JuanPerez'),
+('María López', '59187654321', 'MariaLopez');
+
+-- -- Ventas
+INSERT INTO "Ventas" (cliente_id, total, moneda) VALUES
+(1, 18900.00, 'BS'),
+(2, 10500.00, 'BS');
+
+-- DetallesVentas
+INSERT INTO "DetallesVentas" (venta_id, tipo_item, cantidad, precio_unitario, subtotal, servicio_id) VALUES
+-- Venta 1
+-- Musica y Entretenimiento en Vivo
+(1, 'Servicio', 3, 10500.00, 10500.00, 6),
+-- Centro de Mesa Floral
+(1, 'Producto', 10, 840.00, 8400.00, 1);
+
+-- ReservasServicios
+INSERT INTO "ReservasServicios" (venta_id, cliente_id, servicio_id, fecha, hora, duracion_en_horas) VALUES
+-- Reserva 1
+(1, 1, 6, '2024-12-10', '19:00', 4);
+
+
+
 
 
 -- Paquetes

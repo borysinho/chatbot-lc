@@ -6,6 +6,13 @@ export const getFormatedDate = (date: Date) => {
   });
 };
 
+export const getFormatedHour = (date: Date) => {
+  return date.toLocaleTimeString("es-ES", {
+    hour: "numeric",
+    minute: "numeric",
+  });
+};
+
 export const formatearTiempo = (segundos: number) => {
   const dias = Math.floor(segundos / (60 * 60 * 24));
   segundos -= dias * (60 * 60 * 24);

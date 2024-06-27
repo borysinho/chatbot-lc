@@ -17,6 +17,7 @@ import { $Enums, Chatmedatada_enum } from "@prisma/client";
 import { Chat } from "@prisma/client";
 import { reusablePool } from "../../objects/pgvector.object";
 import { runInContext, runInThisContext } from "vm";
+import { srvObtenerClienteWhatsapp } from "./clientes.service";
 
 export type TChatEmbeddings = {
   chat_id?: number;
@@ -333,16 +334,26 @@ export const setChatHistory = async (
 //   return result;
 // };
 
-export const pgAddUserMessage = async (
-  whatsappNumber: string,
-  input: string
-) => {
-  const message = await chatHistory(whatsappNumber).addUserMessage(input);
+// export const pgAddUserMessage = async (
+//   whatsappNumber: string,
+//   profileName: string,
+//   input: string
+// ) => {
+//   const message = await chatHistory(whatsappNumber, profileName).addUserMessage(
+//     input
+//   );
 
-  return message;
-};
+//   return message;
+// };
 
-export const pgAddAIMessage = async (whatsappNumber: string, input: string) => {
-  const message = await chatHistory(whatsappNumber).addAIMessage(input);
-  return message;
-};
+// export const pgAddAIMessage = async (
+//   whatsappNumber: string,
+//   profileName: string,
+//   input: string
+// ) => {
+//   const message = await chatHistory(whatsappNumber, profileName);
+//   await addAIMessage(
+//     input
+//   );
+//   return message;
+// };

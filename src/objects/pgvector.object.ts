@@ -67,6 +67,50 @@ export const pgProductosDescripcionVectorStore = new PGVectorStore(
   descripcionProductosConfig
 );
 
+// Precios Productos
+
+const precioProductosConfig = {
+  pool: reusablePool,
+  tableName: "Documents",
+  collectionName: "productos_precios",
+  collectionTableName: "collections",
+  schema: "public",
+  columns: {
+    idColumnName: "document_id",
+    vectorColumnName: "vector",
+    contentColumnName: "pagecontent",
+    metadataColumnName: "metadata",
+  },
+  strategy: "cosine" as DistanceStrategy,
+};
+
+export const pgProductosPreciosVectorStore = new PGVectorStore(
+  embeddings,
+  precioProductosConfig
+);
+
+// Stock Productos
+
+const stockProductosConfig = {
+  pool: reusablePool,
+  tableName: "Documents",
+  collectionName: "productos_stock",
+  collectionTableName: "collections",
+  schema: "public",
+  columns: {
+    idColumnName: "document_id",
+    vectorColumnName: "vector",
+    contentColumnName: "pagecontent",
+    metadataColumnName: "metadata",
+  },
+  strategy: "cosine" as DistanceStrategy,
+};
+
+export const pgProductosStockVectorStore = new PGVectorStore(
+  embeddings,
+  stockProductosConfig
+);
+
 // Nombre Servicios
 
 const nombreServiciosConfig = {
@@ -111,28 +155,6 @@ export const pgServiciosDescripcionVectorStore = new PGVectorStore(
   descripcionServiciosConfig
 );
 
-// Precios Productos
-
-const precioProductosConfig = {
-  pool: reusablePool,
-  tableName: "Documents",
-  collectionName: "productos_precios",
-  collectionTableName: "collections",
-  schema: "public",
-  columns: {
-    idColumnName: "document_id",
-    vectorColumnName: "vector",
-    contentColumnName: "pagecontent",
-    metadataColumnName: "metadata",
-  },
-  strategy: "cosine" as DistanceStrategy,
-};
-
-export const pgProductosPreciosVectorStore = new PGVectorStore(
-  embeddings,
-  precioProductosConfig
-);
-
 // Precios Servicios
 
 const precioServiciosConfig = {
@@ -153,6 +175,28 @@ const precioServiciosConfig = {
 export const pgServiciosPreciosVectorStore = new PGVectorStore(
   embeddings,
   precioServiciosConfig
+);
+
+// Rerservas Servicios
+
+const reservasServiciosConfig = {
+  pool: reusablePool,
+  tableName: "Documents",
+  collectionName: "servicios_reservas",
+  collectionTableName: "collections",
+  schema: "public",
+  columns: {
+    idColumnName: "document_id",
+    vectorColumnName: "vector",
+    contentColumnName: "pagecontent",
+    metadataColumnName: "metadata",
+  },
+  strategy: "cosine" as DistanceStrategy,
+};
+
+export const pgServiciosReservasVectorStore = new PGVectorStore(
+  embeddings,
+  reservasServiciosConfig
 );
 
 // Inicialización en caso que no esté inicializado

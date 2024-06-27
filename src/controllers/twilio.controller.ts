@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { buildAgent, textDBIndex } from "../services/agents.service";
+import { buildAgent } from "../services/agents.service";
+import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import {
   srvInsertarCliente,
   srvObtenerCliente,
@@ -29,27 +30,42 @@ export const newMessage = catchedAsync(async (req: Request, res: Response) => {
 
 export const testLC = catchedAsync(async (req: Request, res: Response) => {
   // const { whatsappNumber, profileName, texto } = req.body;
+  console.log(req.body);
   let {
     WaId: whatsappNumber,
     Body: texto,
     ProfileName: profileName,
-    MediaContentType0,
-    MediaUrl0,
-  } = req.body;
+    // MediaContentType0,
+    // MediaUrl0,
+  } = await req.body;
 
-  // let cliente = await srvObtenerClienteWhatsapp(whatsappNumber);
+  const cliente = await srvObtenerClienteWhatsapp(whatsappNumber);
 
-  // if (!cliente) {
-  //   cliente = await srvInsertarCliente({ whatsappNumber, profileName });
-  // }
+  // console.log({ cliente });
+  if (!cliente) {
+    await srvInsertarCliente({ whatsappNumber, profileName });
+  }
 
   console.log({ whatsappNumber, profileName, texto });
 
-  const result: any = await buildAgent(texto, whatsappNumber);
+  const agent: any = await buildAgent();
+
+  const result = await agent.invoke(
+    {
+      input: texto,
+    },
+    {
+      configurable: {
+        sessionId: whatsappNumber,
+      },
+    }
+  );
 
   // // console.log({ IAAnser: result.output });
 
-  const message = await sendWhatsappMessage(whatsappNumber, result.output);
+  // const message = await sendWhatsappMessage(whatsappNumber, result.output);
+
+  console.log({ output: result.output });
 
   response(res, 200, result.output as string);
 
@@ -136,9 +152,5 @@ export const testLC = catchedAsync(async (req: Request, res: Response) => {
 });
 
 export const indexDataSource = catchedAsync(
-  async (req: Request, res: Response) => {
-    await textDBIndex();
-
-    return response(res, 200, "OK");
-  }
+  async (req: Request, res: Response) => {}
 );
